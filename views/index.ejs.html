@@ -1,0 +1,111 @@
+<html>
+	<head>
+		<title>heatmap</title>
+
+		<script src="/static/jquery-v1.4.4.js" type="text/javascript"></script>
+		<script src="/socket.io/socket.io.js" type="text/javascript"></script>
+		<script type="text/javascript"> 
+			var href=document.location.href
+			// clean up href
+			if (href.indexOf('#')>-1) href= href.split('#')[0]
+
+		 	window.socket = new io.Socket(); 
+			window.socket.connect();
+			window.socket.on('connect', function(){
+				window.socket.send(JSON.stringify({action:'connection', href:href}))
+			})
+			window.socket.on('message', function(data){
+				document.getElementById('log').innerHTML+= data +'<br />'
+			})
+			window.socket.on('disconnect', function(){})
+
+			function send(){
+				var s = document.getElementById('msg').value;
+				window.socket.send(s); 
+				document.getElementById('log').innerHTML+= s + '<br />'; 
+				document.getElementById('msg').value = '' 
+			}
+			function log(s){
+				$('#log').prepend('<div>' + s + '</div>')
+			}
+			
+			function coords(e, action){
+				var now = new Date();
+				var offset = $('#heatmap').offset()
+				var x=e.pageX, 
+					y=e.pageY, 
+					obw=$(document.body).outerWidth(true), 
+					obh=$(document.body).outerHeight(true)
+				var o = {
+					'href':href,
+					// 'tz_offset':now.getTimezoneOffset(),
+					'time': now.getTime(),
+					// 'offset': $('#heatmap').offset(),
+					'action': action,
+					// 'x': e.pageX,
+					// 'y': e.pageY,
+					'vpw': $(window).width(),
+					'vph': $(window).height(),
+					'ax': Math.floor(e.pageX - offset.left),
+					'ay': Math.floor(e.pageY - offset.top),
+					'save':true
+				};
+				if (o.ax < 0 || o.ax > obw || o.ay > obh){
+					o.save = false
+				}
+				return o;
+			}
+			// var prev_time = new Date().getTime();
+			// $(document).mousemove(function(e){
+			// 	// alert('here')
+			// 	var now = new Date();
+			// 	if ((prev_time + 500) < now.getTime()){
+			// 		var o = coords(e, 'mousemove')
+			// 		if (o.save) {
+			// 			var coord = JSON.stringify(o)
+			// 			log(coord)
+			// 			window.socket.send(coord)
+			// 			prev_time = now.getTime();
+			// 		}
+			// 	}
+			// })
+			$(document).click(function(e){
+				var o = coords(e, 'click')
+				if (o.save) {
+					var coord = JSON.stringify(o)
+					log(coord)
+					window.socket.send(coord)
+				}
+			})
+			// var window.heatmap;
+			// $.ajax({
+			//   url: '/heatmap',
+			//   dataType: 'json',
+			//   data: {href:'http://localhost:8888/'},
+			//   	success: function(data, status){
+			// 		// data.heatmap
+			// 	}
+			// });
+
+
+		</script>
+		<style>
+			body{width:800px; border:1px solid red; margin:0 auto;}
+		</style>
+	</head>
+	<body>
+		<div id="heatmap"></div>
+		<!-- <img src="/static/heatmaps/http%3A%2F%2Flocalhost%3A8888%2F.png" /> -->
+		
+		<h1>Heatmap</h1>
+		<a href="#user">user</a>
+		<a href="#logout" style="float:right">logout</a>
+		<br />
+		<a href="#image">
+			<img src="http://myfunbook.net/wp-content/uploads/2009/08/f-funny-cat-3539.jpg" />
+		</a>	
+		<div style="height:600px; width:100%; border:1px solid blue">&nbsp;</div>
+		<div id="log" style="height:100px; font-size:small; overflow: auto"></div>
+		
+	</body>
+</html>
