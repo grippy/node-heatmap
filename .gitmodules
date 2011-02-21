@@ -1,0 +1,9 @@
+[submodule "app/redis-node"]
+	path = app/redis-node
+	url = https://github.com/bnoguchi/redis-node.git
+[submodule "app/socket.io-node"]
+	path = app/socket.io-node
+	url = https://github.com/LearnBoost/Socket.IO-node.git
+[submodule "app/node-canvas"]
+	path = app/node-canvas
+	url = https://github.com/LearnBoost/node-canvas.git
