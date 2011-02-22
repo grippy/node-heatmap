@@ -1,5 +1,5 @@
 var http = require('http'),
-    sys = require('sys'),
+    util = require('util'),
     fs = require('fs'),
     url = require('url'),
     qs = require("querystring"),
@@ -19,34 +19,42 @@ var redis = config.redis
 /* helper functions */
 
 function watch_files(){
-    sys.puts("=> Watching files") 
+    util.puts("=> Watching files") 
 	var watch = require('./app/autoexit').watch;
-	watch(__dirname,".js", function(){sys.puts('=> JS File changed. Restarting...')});
-	watch(__dirname,".html", function(){sys.puts('=> HTML File changed. Restarting...')});
+	watch(__dirname,".js", function(){util.puts('=> JS File changed. Restarting...')});
+	watch(__dirname,".html", function(){util.puts('=> HTML File changed. Restarting...')});
 }
 /*////////////////////////////////////////////////////////////////////////////////*/
 /* static files */
 var static_jquery = fs.readFileSync("static/jquery-v1.4.4.js").toString();
+var static_api_v1_client = fs.readFileSync("static/api/v1.0/client.js").toString();
 var re_static_heatmaps = new RegExp('/static/heatmaps/[a-zA-Z0-9%]*.png')
 
 server = http.createServer(function(req, res){ 
     // your normal server code 
-    sys.print(new Date().toString() + ' ')
+    util.print(new Date().toString() + ' ')
     
         req.addListener('data', function(chunk){})
         req.addListener('end', function(){
             var uri = url.parse(req.url),
                 path = uri.pathname,
                 params = (uri.query != undefined) ? qs.parse(uri.query) : {};
-                sys.print(path + ' ')
+                util.print(path + ' ')
                  if(path=='/static/jquery-v1.4.4.js'){
                      res.writeHead(200, {'Content-Type': 'text/javascript', "Content-Length":static_jquery.length}); 
                      res.write(static_jquery)
                      res.end()
+                 } else if (path == '/static/api/v1.0/client.js'){
+                     res.writeHead(200, {'Content-Type': 'text/javascript', "Content-Length":static_api_v1_client.length}); 
+                     res.write(static_api_v1_client)
+                     end(req, res)
                  } else if (path == '/favicon.ico') {
                     res.writeHead(200, {'Content-Type': 'image/vnd.microsoft.icon'}); 
                     res.write('')
                     res.end()
+                    
+                    
+                    
                 } else if (re_static_heatmaps.test(path)) {
                     var fn = path.replace('/', '')
                     var file = fs.readFileSync(fn).toString();
@@ -62,7 +70,7 @@ server = http.createServer(function(req, res){
                         res.writeHead(200, {'Content-Type': 'text/html'}); 
                         
                         if (results){
-                            sys.puts(sys.inspect(results))
+                            util.puts(util.inspect(results))
                             var grid = new Grid()
                             var x, y, v, coords
                             for (var p in results){
@@ -87,15 +95,15 @@ server = http.createServer(function(req, res){
                             res.write(file_name)
                             res.write('<br />http: ')
                             res.write(file_name.replace(__dirname, ''))
-                            var out = fs.createWriteStream(file_name), 
-                                stream = grid.canvas.createPNGStream();
-
-                                stream.on('data', function(chunk){
-                                    out.write(chunk);
-                                });
-                                stream.on('end', function(){
-                                    out.end();
-                                });
+                            // var out = fs.createWriteStream(file_name), 
+                            //     stream = grid.canvas.createPNGStream();
+                            // 
+                            //     stream.on('data', function(chunk){
+                            //         out.write(chunk);
+                            //     });
+                            //     stream.on('end', function(){
+                            //         out.end();
+                            //     });
                         } else {
                             
                             var Canvas = require('./app/node-canvas')
@@ -124,14 +132,14 @@ server = http.createServer(function(req, res){
 
                             res.write(views.heatmap.parse({src: canvas.toDataURL()}))
                         }
-                        sys.print('\n')
+                        util.print('\n')
                         res.end()
                     })
                     
                 } else {
                     res.writeHead(200, {'Content-Type': 'text/html'}); 
                     res.write(views.index.parse({}))
-                    sys.print('\n')
+                    util.print('\n')
                     res.end()
                  }
 
@@ -148,7 +156,7 @@ socket.on('connection', function(client){
 
     var sid = client.sessionId;
     // client.broadcast({ announcement: client.sessionId + ' connected' });
-    // sys.puts(sys.inspect(client))
+    // util.puts(util.inspect(client))
     // client.broadcast(client.sessionId + ': connected' );
     
     
@@ -156,27 +164,27 @@ socket.on('connection', function(client){
 
         try{
             var msg = JSON.parse(m)
-            sys.puts('action: ' + msg.action)
+            util.puts('action: ' + msg.action)
             
             if (msg.action == 'mousemove' || msg.action=='click'){
                 
                 // add this url to the heatmaps?
                 // redis.sismember('heatmaps', msg.href, function(err, success){
-                //     sys.puts(err)
+                //     util.puts(err)
                 //     if (success == 0){
                 //         redis.sadd('heatmaps', msg.href, function(err, success){
-                //             sys.puts(err)
-                //             sys.puts(success)
+                //             util.puts(err)
+                //             util.puts(success)
                 //         })
                 //     }
                 // })
                 var k = msg.ax.toString() + ',' + msg.ay.toString()
-                sys.puts(k)
+                util.puts(k)
                 // bump the grid count for this x,y
                 redis.hincrby(msg.href, k, (msg.action=='click') ? 5 : 1)
             } else if(msg.action == 'connection'){
                 // redis.setnx(sid, msg.href, function(err, success){
-                //     sys.puts(success)
+                //     util.puts(success)
                 // })
                 // record this connection as a page view
                 redis.hincrby('heatmap/pageviews', msg.href, 1)
@@ -194,13 +202,13 @@ socket.on('connection', function(client){
         
         
         // client.broadcast(sid + ': disconnected');
-        // sys.puts(sid)
+        // util.puts(sid)
 
         // redis.get(sid, function(err, href){
-        //     sys.puts(href)
+        //     util.puts(href)
         //     redis.incr(href, function(err, success){
-        //         sys.puts('incr cb')
-        //         sys.puts(success)
+        //         util.puts('incr cb')
+        //         util.puts(success)
         //     
         //     
         //         // bump counter
@@ -243,7 +251,7 @@ Grid.prototype = {
         if (y > this.h) this.h=y
         
         // boost the x,y and then fill the spread...
-        sys.puts('Plot:' + x + ',' + y)
+        util.puts('Plot:' + x + ',' + y)
         var key = x.toString() + ',' + y.toString()
         if (this.coords[key] == undefined) this.coords[key] = 0;
         this.coords[key] += v
@@ -255,7 +263,7 @@ Grid.prototype = {
         //     for (var j=y-2; j < y+3; j++){
         //         // if (i>0 && j>0 && i < this.w && j < this.h){
         //             k = i.toString() + ',' + j.toString()
-        //             sys.puts('Plot:' + k)
+        //             util.puts('Plot:' + k)
         //             if (this.coords[k] == undefined) this.coords[k] = 0;
         //             if (key != k) this.coords[k] += 1
         //         // }
@@ -313,7 +321,7 @@ Grid.prototype = {
             if (v > 1) points.push([p, v])
         }
         points.sort(function(a, b){return a[1] - b[1]})
-        // sys.puts(sys.inspect(points))
+        // util.puts(util.inspect(points))
         
         for (var i=0, ii=points.length, p; i < ii;i++){
             p=points[i]
@@ -322,10 +330,10 @@ Grid.prototype = {
             y = parseInt(coords[1], 10)
             v = parseInt(p[1], 10)
             
-            sys.puts('Render:' + x + ',' + y + ' : ' + v)
+            util.puts('Render:' + x + ',' + y + ' : ' + v)
             rgb = this.rgb(v)
             if (rgb){
-                sys.puts(rgb)
+                util.puts(rgb)
                 this.ctx.beginPath();
                 this.ctx.fillStyle = 'rgba('+rgb+')';
                 this.ctx.arc(x,y,10,0,Math.PI*2,true);
